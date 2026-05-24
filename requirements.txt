@@ -1,5 +1,5 @@
-﻿llama-cpp-python>=0.3.0
-opencv-python>=4.8.0
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-pytest>=8.0.0
+﻿opencv-python
+fastapi
+uvicorn
+pytest
+requests

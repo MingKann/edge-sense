@@ -1,0 +1,50 @@
+# edge-sense 配置文件
+# 阶段3：推理引擎
+
+camera:
+  index: 0
+  width: 640
+  height: 480
+
+# ── Ollama推理 ──
+inference:
+  model: edge-sense
+  base_url: http://localhost:11434
+  cold_timeout: 300       # 首次加载2GB到显存
+  hot_timeout: 120        # 模型已在显存中的推理
+
+# ── 阶段3：推理引擎 ──
+stage3:
+  inference_interval: 30  # 每N帧调用一次LLM（30fps下≈1次/秒）
+  warmup_frames: 158      # MOG2(30) + FFT(128)，必须先于首次推理
+  temperature: 0.2        # 低温度稳定JSON输出
+  json_mode: true         # Ollama API format:"json" + System Prompt双重约束
+
+# ── 预处理管线 ──
+preprocess:
+  color:
+    k_colors: 5
+    sample_step: 4
+
+  motion:
+    history: 100
+    var_threshold: 36
+    warmup_frames: 30
+    low_threshold: 0.005
+    medium_threshold: 0.03
+    high_threshold: 0.10
+    min_area: 200
+
+  flicker:
+    buffer_size: 128
+    fps: 30.0
+    led_threshold: 180
+    led_min_area: 4
+    led_max_area: 400
+    roi_size: 24
+
+  ocr:
+    enabled: true
+    interval: 10
+    psm: 7
+    whitelist: "0123456789.-:AVWHzFkMmμ°CΩ"
