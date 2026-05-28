@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edge-Sense | 边缘视觉诊断</title>
+<style>
+  /* ═══════════════════════════════════════════════
+     Edge-Sense Dashboard — Dark Theme
+     ═══════════════════════════════════════════════ */
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
+  header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+  header .dot.offline { background: var(--red); }
+
+  /* ── Stop Button ── */
+  .stop-btn {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .stop-btn:hover {
+    color: var(--red);
+    border-color: var(--red);
+    background: rgba(248,81,73,0.08);
+  }
+  .stop-btn.stopped {
+    color: var(--muted);
+    border-color: var(--border);
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .container {
+    display: grid;
+    grid-template-columns: 680px 1fr;
+    gap: 16px;
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1100px) {
+    .container { grid-template-columns: 1fr; }
+  }
+
+  /* ── Video Panel ── */
+  .video-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .video-panel img {
+    width: 100%;
+    display: block;
+  }
+  .video-panel .label {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: rgba(0,0,0,0.3);
+  }
+
+  /* ── Diagnosis Panel ── */
+  .diag-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Status Card */
+  .status-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    transition: border-color 0.3s;
+  }
+  .status-card.normal { border-color: var(--green); }
+  .status-card.warning { border-color: var(--yellow); }
+  .status-card.alert { border-color: var(--red); }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .status-badge.normal { background: rgba(63,185,80,0.15); color: var(--green); }
+  .status-badge.warning { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .status-badge.alert { background: rgba(248,81,73,0.15); color: var(--red); }
+
+  .cause { font-size: 1.05rem; margin: 8px 0; color: var(--text); }
+  .meta { font-size: 0.8rem; color: var(--muted); }
+
+  /* Confidence Bar */
+  .confidence-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .confidence-bar {
+    flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .confidence-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+  .confidence-fill.high { background: var(--green); }
+  .confidence-fill.mid { background: var(--yellow); }
+  .confidence-fill.low { background: var(--red); }
+  .confidence-val { font-size: 0.85rem; font-weight: 600; min-width: 36px; text-align: right; }
+
+  /* Info Cards (Color / Motion / Flicker / OCR) */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .info-card h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .info-card .value { font-size: 0.9rem; }
+
+  /* Color Swatches */
+  .swatches { display: flex; gap: 6px; margin-top: 6px; }
+  .swatch {
+    width: 28px; height: 28px; border-radius: 4px;
+    border: 2px solid transparent; cursor: default;
+    position: relative;
+  }
+  .swatch:hover::after {
+    content: attr(data-label);
+    position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+    font-size: 0.65rem; white-space: nowrap; color: var(--muted);
+    background: var(--bg); padding: 2px 6px; border-radius: 3px;
+  }
+
+  /* History Table */
+  .history-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .history-card h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { text-align: left; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); font-weight: 500; }
+  td { padding: 6px 8px; border-bottom: 1px solid rgba(48,54,61,0.5); }
+  tr:last-child td { border-bottom: none; }
+
+  /* Footer */
+  .footer {
+    padding: 8px 24px;
+    font-size: 0.7rem; color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* Animation */
+  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
+  .pulse { animation: pulse 1.5s infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="dot" id="status-dot"></div>
+  <h1>Edge-Sense</h1>
+  <span style="flex:1"></span>
+  <span style="font-size:0.75rem;color:var(--muted)" id="conn-text">连接中...</span>
+  <button class="stop-btn" id="stop-btn" onclick="shutdownServer()">⏹ 停止服务</button>
+</header>
+
+<div class="container">
+
+  <!-- ── Video ── -->
+  <div class="video-panel">
+    <img src="/video_feed" alt="Live Feed" id="video-img">
+    <div class="label" id="frame-label">等待预热...</div>
+  </div>
+
+  <!-- ── Diagnosis ── -->
+  <div class="diag-panel">
+    <!-- Status -->
+    <div class="status-card" id="status-card">
+      <div class="status-badge" id="status-badge">—</div>
+      <div class="cause" id="cause-text">等待首次诊断...</div>
+      <div class="meta" id="meta-text"></div>
+      <div class="confidence-row">
+        <span style="font-size:0.75rem;color:var(--muted)">置信度</span>
+        <div class="confidence-bar"><div class="confidence-fill" id="conf-bar" style="width:0%"></div></div>
+        <span class="confidence-val" id="conf-val">—</span>
+      </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+      <div class="info-card" id="color-card">
+        <h3>🎨 颜色</h3>
+        <div class="value" id="color-text">—</div>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="info-card">
+        <h3>🏃 运动</h3>
+        <div class="value" id="motion-text">—</div>
+      </div>
+      <div class="info-card">
+        <h3>💡 LED闪烁</h3>
+        <div class="value" id="flicker-text">—</div>
+      </div>
+      <div class="info-card">
+        <h3>📝 OCR</h3>
+        <div class="value" id="ocr-text">—</div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-card">
+      <h3>📋 诊断历史 (最近10条)</h3>
+      <table>
+        <thead><tr><th>帧</th><th>状态</th><th>原因</th><th>置信度</th><th>耗时</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">Edge-Sense v0.4.0 · Ollama + OpenCV · 全程离线</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// WebSocket 诊断数据接收 + UI 更新
+// ═══════════════════════════════════════════════════
+const WS_URL = `ws://${location.host}/ws`;
+let ws = null;
+let history = [];  // 最近10条诊断记录
+let manualShutdown = false;  // 是否用户手动停止服务
+
+function shutdownServer() {
+  if (manualShutdown) return;
+  if (!confirm('确定停止 Edge-Sense 服务吗？\n所有诊断将停止，需要重新启动才能恢复。')) return;
+
+  manualShutdown = true;
+  const btn = document.getElementById('stop-btn');
+  btn.textContent = '⏹ 正在停止...';
+  btn.classList.add('stopped');
+  btn.disabled = true;
+  document.getElementById('conn-text').textContent = '正在停止服务...';
+
+  // 发送停止请求（服务端会立即 os._exit(0)，fetch 可能无响应）
+  fetch('/shutdown', { method: 'POST' }).catch(() => {});
+  setTimeout(() => {
+    document.getElementById('conn-text').textContent = '服务已停止';
+    document.getElementById('status-dot').classList.add('offline');
+    btn.textContent = '⏹ 服务已停止';
+  }, 500);
+}
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    document.getElementById('conn-text').textContent = '已连接';
+    document.getElementById('status-dot').classList.remove('offline', 'pulse');
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+
+    // 预热状态消息
+    if (msg.status === 'warming_up') {
+      document.getElementById('frame-label').textContent = msg.message;
+      return;
+    }
+    if (msg.status === 'ready') {
+      document.getElementById('frame-label').textContent = '实时';
+      return;
+    }
+
+    // 诊断消息 → 更新UI
+    updateUI(msg);
+    addHistory(msg);
+  };
+
+  ws.onclose = () => {
+    if (manualShutdown) {
+      document.getElementById('conn-text').textContent = '服务已停止';
+      return;
+    }
+    document.getElementById('conn-text').textContent = '已断开，5秒后重连...';
+    document.getElementById('status-dot').classList.add('offline', 'pulse');
+    setTimeout(connect, 5000);
+  };
+
+  ws.onerror = () => {
+    document.getElementById('conn-text').textContent = '连接失败';
+    document.getElementById('status-dot').classList.add('offline');
+  };
+}
+
+function updateUI(msg) {
+  const { status, cause, confidence, inference_time_s, color, motion, flicker, ocr } = msg;
+
+  // Status card
+  const card = document.getElementById('status-card');
+  card.className = 'status-card ' + status;
+
+  const badge = document.getElementById('status-badge');
+  const icons = { normal: '✅ 正常', warning: '⚠️ 警告', alert: '🚨 告警' };
+  badge.textContent = icons[status] || status;
+  badge.className = 'status-badge ' + status;
+
+  document.getElementById('cause-text').textContent = cause || '—';
+  document.getElementById('meta-text').textContent =
+    `帧 #${msg.frame_id} · 推理耗时 ${inference_time_s}s`;
+
+  // Confidence bar
+  const pct = Math.round((confidence || 0) * 100);
+  const bar = document.getElementById('conf-bar');
+  bar.style.width = pct + '%';
+  bar.className = 'confidence-fill ' + (pct >= 70 ? 'high' : pct >= 40 ? 'mid' : 'low');
+  document.getElementById('conf-val').textContent = (confidence || 0).toFixed(1);
+
+  // Color
+  if (color) {
+    document.getElementById('color-text').textContent =
+      `色温: ${color.color_temperature}`;
+    const sw = document.getElementById('swatches');
+    sw.innerHTML = '';
+    if (color.dominant_colors) {
+      color.dominant_colors.slice(0, 4).forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'swatch';
+        div.style.background = c.hex;
+        div.setAttribute('data-label', `${c.label} ${Math.round(c.ratio*100)}%`);
+        sw.appendChild(div);
+      });
+    }
+  }
+
+  // Motion
+  if (motion) {
+    document.getElementById('motion-text').textContent =
+      `等级: ${motion.level} · ratio: ${motion.motion_ratio?.toFixed(4)} · 区域: ${motion.num_regions}`;
+  }
+
+  // Flicker
+  if (flicker) {
+    if (flicker.status === 'no_led_found') {
+      document.getElementById('flicker-text').textContent = '未检测到LED';
+    } else if (flicker.status === 'initializing') {
+      document.getElementById('flicker-text').textContent = '初始化中';
+    } else {
+      document.getElementById('flicker-text').textContent =
+        `频率: ${flicker.frequency_hz?.toFixed(2)}Hz · ${flicker.is_stable ? '稳定' : '不稳定'}`;
+    }
+  }
+
+  // OCR
+  if (ocr) {
+    if (ocr.status === 'no_text_found') {
+      document.getElementById('ocr-text').textContent = '无文字';
+    } else if (ocr.status === 'ok') {
+      document.getElementById('ocr-text').textContent =
+        `"${ocr.text}" · 置信度: ${ocr.confidence?.toFixed(2)}`;
+    } else {
+      document.getElementById('ocr-text').textContent = ocr.status;
+    }
+  }
+}
+
+function addHistory(msg) {
+  const { frame_id, status, cause, confidence, inference_time_s } = msg;
+  history.unshift({ frame_id, status, cause, confidence, inference_time_s });
+  if (history.length > 10) history.pop();
+
+  const tbody = document.getElementById('history-body');
+  const statusLabels = { normal: '✅正常', warning: '⚠️警告', alert: '🚨告警' };
+  tbody.innerHTML = history.map(h =>
+    `<tr>
+      <td>#${h.frame_id}</td>
+      <td>${statusLabels[h.status] || h.status}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.cause}</td>
+      <td>${(h.confidence||0).toFixed(1)}</td>
+      <td>${h.inference_time_s}s</td>
+    </tr>`
+  ).join('');
+}
+
+// 启动
+connect();
+</script>
+
+</body>
+</html>

@@ -4,3 +4,12 @@ __pycache__/
 .env
 *.log
 models/
+
+# 二进制分发包
+*.whl
+
+# 大模型文件
+*.gguf
+
+# 编辑器 / IDE 配置
+.claude/

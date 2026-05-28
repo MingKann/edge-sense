@@ -28,7 +28,7 @@ try:
             "prompt": "用一句话回答：什么是边缘计算？",
             "stream": False
         },
-        timeout=120
+        timeout=300
     )
     answer = resp.json()["response"].strip()
     print(f"[OK] Ollama reply ({len(answer)} chars): {answer[:80]}...")

@@ -1,5 +1,6 @@
 """
-Ollama HTTP API 推理封装 v3 (阶段3)
+Ollama HTTP API 推理封装 v4 (阶段4 遗留修复)
+- 支持流式中断 (shutdown_event)
 - /api/generate 同步调用
 - JSON模式 + 容错提取
 - 双超时 (冷启动300s/热推理120s)
@@ -11,8 +12,14 @@ Ollama HTTP API 推理封装 v3 (阶段3)
 
 import json
 import re
+import threading
 import requests
 from typing import Optional, Dict, Any
+
+
+class InferenceInterrupted(Exception):
+    """推理被外部中断信号打断（Ctrl+C 退出）"""
+    pass
 
 
 class OllamaInference:
@@ -39,49 +46,83 @@ class OllamaInference:
         system: str = "",
         temperature: float = 0.7,
         json_mode: bool = False,
+        shutdown_event: Optional[threading.Event] = None,
     ) -> str | Dict[str, Any]:
         """
         发送 prompt 到 Ollama，返回文本或解析后的JSON dict
 
         参数:
-            prompt:      用户提示词
-            system:      系统级提示词（角色设定）
-            temperature: 生成温度（阶段3用0.2以稳定JSON输出）
-            json_mode:   若True，payload加入 format:"json"，且返回解析后的dict
+            prompt:         用户提示词
+            system:         系统级提示词（角色设定）
+            temperature:    生成温度
+            json_mode:      若True，payload加入 format:"json"，且返回解析后的dict
+            shutdown_event: 若提供，使用流式模式并在分块间检查中断信号
         返回:
             若 json_mode=False → str
             若 json_mode=True  → dict（解析后的JSON对象）
+        异常:
+            InferenceInterrupted: 流式模式下检测到 shutdown_event
         """
         url = f"{self.base_url}/api/generate"
         payload = {
             "model": self.model,
             "prompt": prompt,
             "system": system,
-            "stream": False,
-            "keep_alive": -1,           # 模型永久驻留显存，避免每次推理重新加载
+            "stream": False,            # 默认非流式，流式模式时覆盖
+            "keep_alive": -1,           # 模型永久驻留显存
             "options": {
                 "temperature": temperature,
-                "num_predict": 128,     # JSON诊断≤128token，减少冗余生成
-                "num_ctx": 1024,        # 上下文窗口1024（诊断不需要长上下文）
+                "num_predict": 128,     # JSON诊断≤128token
+                "num_ctx": 1024,        # 上下文窗口1024
             },
         }
 
-        # R4 缓解：Ollama API 级 JSON 约束
         if json_mode:
             payload["format"] = "json"
 
-        # 双超时选择
-        timeout = self.cold_timeout if self._first_call else self.hot_timeout
+        # ── 流式模式（支持中断）─────────────────
+        if shutdown_event is not None:
+            payload["stream"] = True
+            stream_timeout = (10, 30)      # (连接10s, 分块间30s)
 
-        resp = requests.post(url, json=payload, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.json()
+            resp = requests.post(url, json=payload, timeout=stream_timeout, stream=True)
+            try:
+                resp.raise_for_status()
+                full_response = ""
 
-        # 首次调用完成 → 后续使用热超时
-        if self._first_call:
-            self._first_call = False
+                for line in resp.iter_lines(decode_unicode=True):
+                    # ★ 关键：每收到一个 token 后检查退出信号
+                    if shutdown_event.is_set():
+                        raise InferenceInterrupted("推理被中断信号打断")
 
-        raw_text = data.get("response", "").strip()
+                    if line:
+                        try:
+                            chunk = json.loads(line)
+                            full_response += chunk.get("response", "")
+                            if chunk.get("done", False):
+                                break
+                        except json.JSONDecodeError:
+                            continue      # 跳过畸形行，容错
+            finally:
+                resp.close()              # 确保连接关闭
+
+            if self._first_call:
+                self._first_call = False
+
+            raw_text = full_response.strip()
+
+        # ── 非流式模式（向后兼容 stage3_prototype.py）────
+        else:
+            timeout = self.cold_timeout if self._first_call else self.hot_timeout
+
+            resp = requests.post(url, json=payload, timeout=timeout)
+            resp.raise_for_status()
+            data = resp.json()
+
+            if self._first_call:
+                self._first_call = False
+
+            raw_text = data.get("response", "").strip()
 
         # R1 缓解：JSON模式时走容错提取管线
         if json_mode:
@@ -95,8 +136,6 @@ class OllamaInference:
         """
         print("[warmup] 正在加载模型到显存...", end=" ", flush=True)
         self.generate("1+1=", temperature=0, json_mode=False)
-        # 注意：warmup调用后 _first_call 已变为 False
-        # 后续 generate() 全部使用 hot_timeout
         print("完成")
 
     def ping(self) -> bool:

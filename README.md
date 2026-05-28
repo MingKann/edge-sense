@@ -1,0 +1,151 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Edge--Sense-v0.4.0-58a6ff?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzE2MWIyMiIvPjx0ZXh0IHg9IjE2IiB5PSIyMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXdlaWdodD0iYm9sZCIgZm9udC1zaXplPSIyMCIgZmlsbD0iIzU4YTZmZiI+RTwvdGV4dD48L3N2Zz4=">
+  <img alt="Edge-Sense" src="https://img.shields.io/badge/Edge--Sense-v0.4.0-161b22?style=flat-square">
+</picture>
+
+# Edge-Sense — 边缘视觉诊断系统
+
+> 通过 USB 摄像头实时监控设备面板，结合 Python 规则引擎和本地大模型，实现毫秒级边缘智能诊断。
+
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![OpenCV](https://img.shields.io/badge/OpenCV-4.x-5C3EE8?style=flat-square&logo=opencv)
+![Ollama](https://img.shields.io/badge/Ollama-Qwen2.5--3B-000?style=flat-square&logo=ollama)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?style=flat-square&logo=fastapi)
+![Tesseract](https://img.shields.io/badge/Tesseract-OCR-004D40?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
+
+---
+
+## 架构概览
+
+```mermaid
+flowchart LR
+    A["📷 USB Camera"] --> B["FrameAnalyzer<br/>预处理管线"]
+
+    subgraph B [" "]
+        C["🎨 K-means 颜色检测"] --> D["🏃 MOG2 运动检测"]
+        D --> E["💡 FFT LED 闪烁分析"]
+        E --> F["📝 Tesseract OCR"]
+    end
+
+    B --> G["Python 规则引擎<br/>compute_status() + compute_confidence()"]
+    G --> H["OllamaInference<br/>LLM JSON 格式化"]
+    H --> I["🖥️ FastAPI Web 面板"]
+    I --> J["📺 MJPEG 视频流"]
+    I --> K["📡 WebSocket 诊断推送"]
+    I --> L["🌐 暗色仪表盘"]
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style G fill:#16213e,stroke:#0f3460,color:#fff
+    style H fill:#0f3460,stroke:#e94560,color:#fff
+    style I fill:#1a1a2e,stroke:#533483,color:#fff
+```
+
+**设计原则**: Python 处理所有确定性逻辑（规则判定 + 数值计算），LLM 仅负责语义格式化和 JSON 输出。这一决策保障了诊断结果的确定性，消除了 3B 量化模型在数值计算上的不稳定性。
+
+---
+
+## 技术栈
+
+| 模块 | 技术 | 用途 |
+|------|------|------|
+| 采集 | OpenCV (CAP_DSHOW) | USB 摄像头实时帧捕获 |
+| 颜色检测 | K-means 聚类 (OpenCV) | 主色提取 + 色温判定 |
+| 运动检测 | MOG2 背景建模 | 运动强度分级 + 告警 |
+| 频率分析 | FFT (NumPy) | LED 闪烁频率测量 |
+| OCR | Tesseract 5.x | 面板数字/文字读取 |
+| 推理引擎 | Ollama + Qwen2.5-3B Q4_K_M | JSON 格式化诊断输出 |
+| Web 服务 | FastAPI + uvicorn | MJPEG 流 + WebSocket |
+| 前端 | 单文件 HTML/CSS/JS | 暗色主题仪表盘 |
+
+---
+
+## 快速开始
+
+### 前置条件
+
+- [Ollama](https://ollama.com/)（已配置 `edge-sense` 模型）
+- Python 3.10+
+- USB 摄像头
+- [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki)（UB-Mannheim Windows 安装版）
+
+### 1. 创建 Ollama 模型
+
+```bash
+ollama create edge-sense -f Modelfile.qwen
+```
+
+### 2. 安装 Python 依赖
+
+```bash
+python -m venv venv
+source venv/Scripts/activate   # Windows Git Bash
+pip install -r requirements.txt
+```
+
+### 3. 启动 Web 面板
+
+```bash
+cd src
+python server.py
+```
+
+打开浏览器访问 **http://localhost:8000**
+
+### 4. 快捷诊断（终端模式）
+
+```bash
+cd src
+python stage3_prototype.py
+```
+
+---
+
+## 阶段路线
+
+| 阶段 | 状态 | 描述 |
+|------|------|------|
+| 阶段 1 | ✅ 完成 | 原型验证：OpenCV 基础管线 |
+| 阶段 2 | ✅ 完成 | 预处理管线：颜色/运动/闪烁/OCR |
+| 阶段 3 | ✅ 完成 | 推理引擎：Python 规则引擎 + LLM JSON 格式化 |
+| 阶段 4 | ✅ 完成 | Web 面板：FastAPI + MJPEG + WebSocket 仪表盘 |
+| **阶段 5** | **🔄 进行中** | **Demo + 发布：文档、GIF、代码清理、GitHub** |
+
+---
+
+## 演示
+
+| 场景 | 截图 | 预期表现 |
+|------|------|----------|
+| 🟢 正常 | ![normal](docs/screenshot-normal.png) | 绿色边框 "✅ 正常"，置信度 ≥ 0.8 |
+| 🟡 运动触发 | ![warning](docs/screenshot-warning.png) | 黄色边框 "⚠️ 警告"，检测到运动区域 |
+| 🔴 面板遮挡 | ![alert](docs/screenshot-alert.png) | 红色边框 "🚨 告警"，置信度下降 |
+
+---
+
+## 项目结构
+
+```
+edge-sense/
+├── src/
+│   ├── camera.py              # 摄像头采集
+│   ├── preprocess.py          # 预处理管线（颜色/运动/闪烁/OCR）
+│   ├── inference.py           # Ollama HTTP API 封装
+│   ├── stage3_prototype.py    # 规则引擎 + 诊断入口
+│   ├── server.py              # FastAPI Web 服务
+│   ├── check.py               # 环境检查
+│   └── config.yaml            # 全局配置
+├── web/
+│   └── index.html             # 暗色仪表盘
+├── models/                    # GGUF 模型文件
+├── tests/                     # 单元测试
+├── Modelfile.qwen             # Ollama 模型定义
+├── CLAUDE.md                  # Claude Code 项目上下文
+└── requirements.txt           # Python 依赖
+```
+
+---
+
+## License
+
+MIT

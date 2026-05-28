@@ -48,16 +48,19 @@ def compute_status(data: dict) -> tuple:
     if motion["status"] == "ready":
         level = motion["level"]
         regions = motion["num_regions"]
-        if level in ("medium", "high"):
-            return ("alert", f"检测到显著运动(ratio={motion['motion_ratio']:.4f}, 区域数={regions})")
+        ratio = motion["motion_ratio"]
+        if (level in ("medium", "high")) and ratio >= 0.08:
+            return ("alert", f"检测到显著运动(ratio={ratio:.4f}, 区域数={regions})")
         if level == "low" and regions >= 2:
             return ("warning", f"检测到轻微运动(区域数={regions})")
 
     # 规则2: LED闪烁异常（中等优先级）
+    # 低频率(0.5-1.5Hz)多为摄像头AGC呼吸伪影，提高频率下限和振幅阈值排除噪声
     if flicker["status"] == "ready":
         freq = flicker["frequency_hz"]
         is_stable = flicker["is_stable"]
-        if not is_stable and 0.5 <= freq <= 5.0:
+        amp = flicker["amplitude"]
+        if not is_stable and 1.5 <= freq <= 5.0 and amp >= 8.0:
             return ("warning", f"LED闪烁异常(频率={freq:.2f}Hz)")
 
     # 规则3: 正常（兜底）
@@ -220,7 +223,6 @@ def main():
                 if fid % inference_interval != 0:
                     continue
 
-                # Python预计算（确定性）
                 py_status, py_cause = compute_status(data)
                 py_conf = compute_confidence(data)
 
@@ -245,16 +247,14 @@ def main():
                     total += 1
                     continue
 
-                # 验证字段完整性
                 required = {"status", "cause", "confidence", "details"}
                 missing = required - set(result.keys())
                 if missing:
-                    print(f"\n[帧 {fid}] ⚠️ 输出缺少字段: {missing}")
+                    print(f"\n[帧 {fid}] 输出缺少字段: {missing}")
                     fail += 1
                 else:
                     ok += 1
 
-                # 对比LLM输出的status vs Python计算的status
                 llm_status = result.get("status", "?")
                 match_mark = "✓" if llm_status == py_status else f"✗(应为{py_status})"
 
@@ -282,7 +282,7 @@ def main():
             if latencies:
                 avg_lat = sum(latencies) / len(latencies)
                 print(f"  推理延迟:         平均 {avg_lat:.1f}s / 最小 {min(latencies):.1f}s / 最大 {max(latencies):.1f}s")
-            print(f"\n  ✅ JSON合规率 {ok/total*100:.0f}% ≥ 90% → 达标" if ok/total >= 0.9 else f"\n  ❌ JSON合规率 {ok/total*100:.0f}% < 90%")
+            print(f"\n  {'✅' if ok/total >= 0.9 else '❌'} JSON合规率 {ok/total*100:.0f}% {'≥' if ok/total >= 0.9 else '<'} 90%")
             print(f"  {'✅' if latencies and sum(latencies)/len(latencies) <= 6.0 else '❌'} 平均延迟 {avg_lat:.1f}s {'≤' if avg_lat <= 6.0 else '>'} 6s")
         else:
             print("  (无推理记录)")

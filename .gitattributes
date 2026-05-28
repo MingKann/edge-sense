@@ -1,0 +1,27 @@
+# 统一使用 LF 换行符（适配 Windows + Linux 双平台）
+* text=auto eol=lf
+
+# Python 源文件
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.cfg text eol=lf
+*.toml text eol=lf
+
+# Web 前端
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# 文档
+*.md text eol=lf
+*.txt text eol=lf
+
+# 二进制文件（不进行 CRLF 转换）
+*.png binary
+*.jpg binary
+*.gif binary
+*.svg binary
+*.ico binary
+*.whl binary
+*.gguf binary
