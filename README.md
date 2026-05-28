@@ -12,6 +12,7 @@
 ![Ollama](https://img.shields.io/badge/Ollama-Qwen2.5--3B-000?style=flat-square&logo=ollama)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?style=flat-square&logo=fastapi)
 ![Tesseract](https://img.shields.io/badge/Tesseract-OCR-004D40?style=flat-square)
+![CI](https://img.shields.io/github/actions/workflow/status/MingKann/edge-sense/ci.yml?branch=master&style=flat-square&logo=github&label=CI)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
 ---
@@ -109,7 +110,32 @@ python stage3_prototype.py
 | 阶段 2 | ✅ 完成 | 预处理管线：颜色/运动/闪烁/OCR |
 | 阶段 3 | ✅ 完成 | 推理引擎：Python 规则引擎 + LLM JSON 格式化 |
 | 阶段 4 | ✅ 完成 | Web 面板：FastAPI + MJPEG + WebSocket 仪表盘 |
-| **阶段 5** | **🔄 进行中** | **Demo + 发布：文档、GIF、代码清理、GitHub** |
+| **阶段 5** | **✅ 完成** | **Demo + 发布：文档、截图、CI、代码清理、GitHub** |
+
+---
+
+## 架构迭代与量化成果
+
+### 迭代历程
+
+| 版本 | 架构 | 规则匹配 | 置信度 | 延迟 |
+|------|------|----------|--------|------|
+| v1 | LLM 全权判断 + 完整 System Prompt | 规则 3 从未触发 | 固定 0.90（不合理） | 7.6s |
+| v2 | 压缩 Prompt + keep_alive=-1 | 规则 2 不稳定 | **随机值 0.00/0.30/0.80** | — |
+| v3 | Python 计算置信度 | 误判/漏判 | 稳定 0.80 | — |
+| **v4** | **Python 规则引擎 + LLM 仅格式化** | **8/8 全匹配** | **确定性输出** | **5.1s (-33%)** |
+
+### 关键成果
+
+- **规则匹配率**: 0% → 100%（从 LLM 漏判到 Python 确定性逻辑，8 条规则全部正确触发）
+- **推理延迟**: 7.6s → 5.1s（降幅 33%），归因于 `keep_alive=-1` 消除模型加载时间 + 精简 Prompt
+- **置信度稳定性**: 随机跳变 → 确定性输出，消除 3B 量化模型在数值计算上的不稳定性
+- **LED 误报修复**: 通过 `amp ≥ 8.0` + 频率上下限 1.5-5.0Hz 双层约束，消除摄像头 AGC 呼吸伪影误报
+
+### 测试覆盖
+
+- **22 个单元测试**（规则引擎 13 项 + JSON 容错提取 9 项），不依赖硬件，CI 自动执行
+- JSON 四层容错回退覆盖：标准解析 → Markdown 围栏 → 正则提取 → 尾部逗号修复
 
 ---
 
