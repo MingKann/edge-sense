@@ -61,6 +61,89 @@ flowchart LR
 
 ---
 
+## 技术细节与调优记录
+
+### MOG2 运动检测
+
+```python
+cv2.createBackgroundSubtractorMOG2(
+    history=100,        # 背景建模参考帧数
+    varThreshold=36,    # 前景方差阈值（越大越不敏感）
+    detectShadows=False # 关闭阴影检测，减少误检
+)
+```
+
+- **30帧预热期**：前30帧仅用于背景模型收敛，不计入检测结果
+- **运动分级**：`ratio < 0.005` 无运动 → `0.005~0.03` low → `0.03~0.10` medium → `≥ 0.10` high（基于 640×480=307Kpx）
+- **形态学去噪**：ELLIPSE(5,5) 开运算消除孤立噪点 + 闭运算填充前景空洞
+- **学习率**：预热后 `learningRate=0.005` 极低学习率，防止静止目标被吸入背景
+
+### FFT LED 闪烁分析
+
+```python
+signal = signal - signal.mean()          # 去均值（移除 DC 直流分量）
+fft = np.fft.rfft(signal)               # 实信号 FFT（对称性优化）
+freqs = np.fft.rfftfreq(len(signal), d=1.0/fps)  # 频率轴
+```
+
+- **128帧环形缓冲区**：30fps 下覆盖 ~4.3s，频率分辨率 ≈ 0.23Hz
+- **Nyquist 极限**：30fps 采样率 → 理论上限 15Hz，实际聚焦 0.5~5.0Hz
+- **跳过 DC**：`min_freq_idx` 排除 0.5Hz 以下直流/超低频干扰
+- **AGC 呼吸伪影（关键发现）**：室内光线不足时摄像头自动增益导致亮度周期性波动，FFT 检测到 **0.5-0.9Hz / 振幅 3-4**，非真实 LED。规则 2 通过 `amp ≥ 8.0` + 频率下限 1.5Hz 双层阈值抑制此误报
+
+### Tesseract OCR 预处理
+
+```python
+# CLAHE 增强局部对比度 → 自适应阈值二值化
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+gray = clahe.apply(gray)
+binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                cv2.THRESH_BINARY, 15, 4)
+```
+
+- **PSM 7**：单行文本模式，适合设备面板读数（如 `23.5°C`）
+- **字符白名单**：`0123456789.-:AVWHzFkMmμ°CΩ`，限制识别范围提升准确率
+- **CLAHE vs 全局阈值**：弱光/阴影下先增强对比度再二值化，远优于直接 `cv2.threshold`
+- **OCR 间隔**：每 10 帧执行一次（避免逐帧 OCR 的开销）
+
+### Ollama 推理调优
+
+```json
+{
+  "model": "edge-sense",
+  "options": { "temperature": 0.2, "num_predict": 128, "num_ctx": 1024 },
+  "format": "json",
+  "keep_alive": -1
+}
+```
+
+| 参数 | 效果 |
+|------|------|
+| `keep_alive: -1` | 模型永久驻留显存，消除每次推理 ~4s 的模型加载时间 |
+| `num_ctx: 1024` | 从默认 4096 缩减，KV cache 省 ~900MB，prefill 时间降约 30% |
+| `num_predict: 128` | 诊断 JSON 约 80-120 token，限制防止冗余生成 |
+| `temperature: 0.2` | 低温度稳定 JSON 输出结构 |
+| `format: "json"` | Ollama API 级 JSON 约束，配合四层容错提取兜底 |
+
+**延迟优化链路**：
+
+```
+v1 7.6s: 无 keep_alive, context 4096, 长 system prompt
+  ↓ +keep_alive=-1   省 ~4s 模型加载
+  ↓ +num_ctx=1024    省 ~1s prefill
+  ↓ +System Prompt 精简
+v4 5.1s: 4s prefill + 1-2s generation（RTX 4050 物理上限）
+```
+
+**JSON 四层容错提取**：L1 直接 `json.loads` → L2 去除 ` ```json ` 围栏 → L3 正则提取 `{...}` → L4 修复尾部逗号
+
+### 3B 量化模型能力边界（架构决策依据）
+
+- ❌ 不可靠的四则运算：`0.9 - 0.2 - 0.1` 输出随机值 → `compute_confidence()` 由 Python 计算
+- ❌ 不可靠的多字段条件判断：`motion.level=="low" AND regions>=2` 误判/漏判 → `compute_status()` 由 Python 执行
+- ❌ "安全回答"倾向：confidence 定义 `0.9-1.0: 无歧义` → 模型永远输出 0.90
+- ✅ LLM 只做语义格式化：JSON 结构 + 中文摘要，发挥语言模型优势，规避计算弱点
+
 ## 快速开始
 
 ### 前置条件
