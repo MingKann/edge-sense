@@ -1,7 +1,7 @@
-# Edge-Sense 后续计划
+# Vantage 后续计划
 
 > 当前主分支: `master` (2026-05-29)
-> 项目地址: https://github.com/MingKann/edge-sense
+> 项目地址: https://github.com/MingKann/vantage
 
 ---
 

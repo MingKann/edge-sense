@@ -173,14 +173,14 @@ def main():
     temperature = stage3_cfg.get("temperature", 0.2)
 
     print("=" * 60)
-    print("  Edge-Sense 阶段3：推理引擎原型 v4")
+    print("  Vantage 阶段3：推理引擎原型 v4")
     print(f"  架构: Python规则判定 + LLM格式化JSON")
     print(f"  推理间隔: 每 {inference_interval} 帧")
     print(f"  预热帧数: {warmup_frames} 帧")
     print("=" * 60)
 
     inference = OllamaInference(
-        model=inference_cfg.get("model", "edge-sense"),
+        model=inference_cfg.get("model", "vantage"),
         base_url=os.environ.get("OLLAMA_URL") or inference_cfg.get("base_url", "http://localhost:11434"),
         cold_timeout=inference_cfg.get("cold_timeout", 300),
         hot_timeout=inference_cfg.get("hot_timeout", 120),

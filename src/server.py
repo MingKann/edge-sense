@@ -1,5 +1,5 @@
 """
-Edge-Sense Web 面板后端 (阶段4 v7)
+Vantage Web 面板后端 (阶段4 v7)
 FastAPI + MJPEG 视频流 + WebSocket 诊断推送
 
 v7: signal.signal(SIGINT) C级处理器兜底，无视 uvicorn 关闭等待（Ctrl+C <1秒退出）
@@ -83,7 +83,7 @@ def camera_loop():
 
     ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
     print(f"[camera-thread] Ollama URL: {ollama_url}")
-    inference = OllamaInference(model="edge-sense", base_url=ollama_url,
+    inference = OllamaInference(model="vantage", base_url=ollama_url,
                                 cold_timeout=300, hot_timeout=120)
 
     if not inference.ping():
@@ -211,7 +211,7 @@ async def lifespan(app: FastAPI):
 
 # ── FastAPI 应用 ────────────────────────────────────────
 
-app = FastAPI(title="Edge-Sense", version="0.5.0", lifespan=lifespan)
+app = FastAPI(title="Vantage", version="0.5.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -225,7 +225,7 @@ async def index():
 
 @app.get("/favicon.ico")
 async def favicon():
-    """Edge-Sense SVG favicon — 消除浏览器 404 请求"""
+    """Vantage SVG favicon — 消除浏览器 404 请求"""
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
         '<rect width="32" height="32" rx="6" fill="#161b22"/>'
@@ -347,7 +347,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, _handle_sigint)
 
     print("=" * 50)
-    print("  Edge-Sense Web Panel (阶段4 v7)")
+    print("  Vantage Web Panel (阶段4 v7)")
     print("  前端: http://localhost:8000")
     print("  停止: Ctrl+C 或 POST /shutdown（<1秒内退出）")
     print("=" * 50)

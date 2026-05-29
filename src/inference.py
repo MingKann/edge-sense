@@ -27,7 +27,7 @@ class OllamaInference:
 
     def __init__(
         self,
-        model: str = "edge-sense",
+        model: str = "vantage",
         base_url: str = "http://localhost:11434",
         hot_timeout: int = 120,        # 热推理超时：模型已在显存中
         cold_timeout: int = 300,       # 冷启动超时：首次加载2GB到显存

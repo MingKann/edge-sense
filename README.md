@@ -1,9 +1,9 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Edge--Sense-v0.4.0-58a6ff?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzE2MWIyMiIvPjx0ZXh0IHg9IjE2IiB5PSIyMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXdlaWdodD0iYm9sZCIgZm9udC1zaXplPSIyMCIgZmlsbD0iIzU4YTZmZiI+RTwvdGV4dD48L3N2Zz4=">
-  <img alt="Edge-Sense" src="https://img.shields.io/badge/Edge--Sense-v0.4.0-161b22?style=flat-square">
+  <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/Vantage-v0.5.0-58a6ff?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzE2MWIyMiIvPjx0ZXh0IHg9IjE2IiB5PSIyMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXdlaWdodD0iYm9sZCIgZm9udC1zaXplPSIyMCIgZmlsbD0iIzU4YTZmZiI+VjwvdGV4dD48L3N2Zz4=">
+  <img alt="Vantage" src="https://img.shields.io/badge/Vantage-v0.5.0-161b22?style=flat-square">
 </picture>
 
-# Edge-Sense — 边缘视觉诊断系统
+# Vantage — 边缘视觉诊断系统
 
 > 通过 USB 摄像头实时监控设备面板，结合 Python 规则引擎和本地大模型，实现毫秒级边缘智能诊断。
 
@@ -12,7 +12,7 @@
 ![Ollama](https://img.shields.io/badge/Ollama-Qwen2.5--3B-000?style=flat-square&logo=ollama)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?style=flat-square&logo=fastapi)
 ![Tesseract](https://img.shields.io/badge/Tesseract-OCR-004D40?style=flat-square)
-![CI](https://img.shields.io/github/actions/workflow/status/MingKann/edge-sense/ci.yml?branch=master&style=flat-square&logo=github&label=CI)
+![CI](https://img.shields.io/github/actions/workflow/status/MingKann/vantage/ci.yml?branch=master&style=flat-square&logo=github&label=CI)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
 ---
@@ -110,7 +110,7 @@ binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
 
 ```json
 {
-  "model": "edge-sense",
+  "model": "vantage",
   "options": { "temperature": 0.2, "num_predict": 128, "num_ctx": 1024 },
   "format": "json",
   "keep_alive": -1
@@ -148,7 +148,7 @@ v4 5.1s: 4s prefill + 1-2s generation（RTX 4050 物理上限）
 
 ### 前置条件
 
-- [Ollama](https://ollama.com/)（已配置 `edge-sense` 模型）
+- [Ollama](https://ollama.com/)（已配置 `vantage` 模型）
 - Python 3.10+
 - USB 摄像头
 - [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki)（UB-Mannheim Windows 安装版）
@@ -156,7 +156,7 @@ v4 5.1s: 4s prefill + 1-2s generation（RTX 4050 物理上限）
 ### 1. 创建 Ollama 模型
 
 ```bash
-ollama create edge-sense -f Modelfile.qwen
+ollama create vantage -f Modelfile.qwen
 ```
 
 ### 2. 安装 Python 依赖
@@ -236,7 +236,7 @@ python stage3_prototype.py
 ## 项目结构
 
 ```
-edge-sense/
+vantage/
 ├── src/
 │   ├── camera.py              # 摄像头采集
 │   ├── preprocess.py          # 预处理管线（颜色/运动/闪烁/OCR）

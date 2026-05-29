@@ -24,7 +24,7 @@ try:
     resp = requests.post(
         "http://localhost:11434/api/generate",
         json={
-            "model": "edge-sense",
+            "model": "vantage",
             "prompt": "用一句话回答：什么是边缘计算？",
             "stream": False
         },

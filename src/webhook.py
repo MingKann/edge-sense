@@ -17,7 +17,7 @@ Webhook 告警通知模块
     timeout: 5
     retries: 2
     urls:
-      - url: "https://hooks.example.com/edge-sense"
+      - url: "https://hooks.example.com/vantage"
         headers:
           X-Custom-Header: "value"
 """
@@ -83,7 +83,7 @@ def build_payload(diagnosis: dict) -> dict:
             },
         },
         "source": {
-            "name": "edge-sense",
+            "name": "vantage",
             "version": "0.5.0",
         },
     }
@@ -111,7 +111,7 @@ def send_webhook(
     url = url_config.get("url", "")
     headers = dict(url_config.get("headers", {}))
     headers.setdefault("Content-Type", "application/json")
-    headers.setdefault("User-Agent", "Edge-Sense/0.5.0 Webhook")
+    headers.setdefault("User-Agent", "Vantage/0.5.0 Webhook")
 
     for attempt in range(1 + retries):
         try:

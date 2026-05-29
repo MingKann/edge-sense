@@ -1,7 +1,7 @@
 services:
 
-  # ─── Edge-Sense App ───────────────────────────────
-  edge-sense:
+  # ─── Vantage App ─────────────────────────────────────
+  vantage:
     build: .
     ports:
       - "8000:8000"
@@ -17,7 +17,7 @@ services:
 
   # ─── Ollama 服务（可选）───────────────────────────
   # 如需 Docker 内运行 Ollama，取消下方注释即可。
-  # 首次启动后需执行: docker compose exec ollama ollama create edge-sense -f /app/Modelfile.qwen
+  # 首次启动后需执行: docker compose exec ollama ollama create vantage -f /app/Modelfile.qwen
   #
   # ollama:
   #   image: ollama/ollama
@@ -34,8 +34,7 @@ services:
   #             count: all
   #             capabilities: [gpu]
   #
-  # 若启用 Ollama 容器，edge-sense 的 OLLAMA_URL 需改为:
-  #   - OLLAMA_URL=http://ollama:11434
+  # 若启用 Ollama 容器，vantage 的 OLLAMA_URL 需改为:  #   - OLLAMA_URL=http://ollama:11434
 
 # volumes:
 #   ollama_data:

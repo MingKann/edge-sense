@@ -16,7 +16,7 @@ from inference import OllamaInference
 CAMERA_INDEX = 0
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
-MODEL_NAME = "edge-sense"
+MODEL_NAME = "vantage"
 OLLAMA_URL = "http://localhost:11434"
 
 # ── System Prompt ─────────────────────────────────────
@@ -106,7 +106,7 @@ def main():
     import cv2  # 仅此处导入，避免 camera.py 遗漏依赖时报错不清晰
 
     print("=" * 50)
-    print(" edge-sense · 阶段1：采集 + 推理原型")
+    print(" Vantage · 阶段1：采集 + 推理原型")
     print("=" * 50)
 
     # 1. 初始化推理引擎

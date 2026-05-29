@@ -1,4 +1,4 @@
-# Edge-Sense — 边缘视觉诊断系统
+# Vantage — 边缘视觉诊断系统
 
 ## 项目概述
 
@@ -18,7 +18,7 @@
 ## 目录结构
 
 ```
-edge-sense/
+vantage/
 ├── src/
 │   ├── camera.py          # 摄像头采集 (Camera类, DSHOW后端)
 │   ├── preprocess.py      # 预处理管线 (FrameAnalyzer: 颜色+运动+闪烁+OCR)
@@ -56,7 +56,7 @@ cd src && python check.py
 
 # 模型管理
 ollama list              # 查看已加载模型
-ollama create edge-sense -f Modelfile.qwen   # 创建模型
+ollama create vantage -f Modelfile.qwen   # 创建模型
 ```
 
 ## 开发约束

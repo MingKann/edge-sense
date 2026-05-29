@@ -28,7 +28,7 @@ def main():
     cfg = load_config("src/config.yaml")
 
     print("=" * 55)
-    print(" edge-sense · 阶段2：预处理管线测试")
+    print(" Vantage · 阶段2：预处理管线测试")
     print("=" * 55)
 
     # 初始化

@@ -2,7 +2,7 @@
 SQLite 诊断历史持久化模块
 
 每个诊断结果写入本地 SQLite 数据库，支持历史查询和聚合统计。
-数据库文件默认位于项目根目录 edge-sense/history.db。
+数据库文件默认位于项目根目录 vantage/history.db。
 """
 
 import json

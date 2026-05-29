@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edge-Sense | 边缘视觉诊断</title>
+<title>Vantage | 边缘视觉诊断</title>
 <style>
   /* ═══════════════════════════════════════════════
-     Edge-Sense Dashboard — Dark Theme
+     Vantage Dashboard — Dark Theme
      ═══════════════════════════════════════════════ */
   :root {
     --bg: #0d1117;
@@ -205,7 +205,7 @@
 
 <header>
   <div class="dot" id="status-dot"></div>
-  <h1>Edge-Sense</h1>
+  <h1>Vantage</h1>
   <span style="flex:1"></span>
   <span style="font-size:0.75rem;color:var(--muted)" id="conn-text">连接中...</span>
   <button class="stop-btn" id="stop-btn" onclick="shutdownServer()">⏹ 停止服务</button>
@@ -271,7 +271,7 @@
   </div>
 </div>
 
-<div class="footer">Edge-Sense v0.5.0 · Ollama + OpenCV · 全程离线</div>
+<div class="footer">Vantage v0.5.0 · Ollama + OpenCV · 全程离线</div>
 
 <script>
 // ═══════════════════════════════════════════════════
@@ -284,7 +284,7 @@ let manualShutdown = false;  // 是否用户手动停止服务
 
 function shutdownServer() {
   if (manualShutdown) return;
-  if (!confirm('确定停止 Edge-Sense 服务吗？\n所有诊断将停止，需要重新启动才能恢复。')) return;
+  if (!confirm('确定停止 Vantage 服务吗？\n所有诊断将停止，需要重新启动才能恢复。')) return;
 
   manualShutdown = true;
   const btn = document.getElementById('stop-btn');

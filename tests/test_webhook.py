@@ -55,7 +55,7 @@ def test_build_payload_structure():
     assert payload["frame_id"] == 42
     assert payload["status"] == "alert"
     assert payload["cause"] == "检测到显著运动"
-    assert payload["source"]["name"] == "edge-sense"
+    assert payload["source"]["name"] == "vantage"
 
 
 def test_build_payload_color_dominant_only_top2():
