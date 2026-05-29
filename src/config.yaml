@@ -19,6 +19,13 @@ stage3:
   warmup_frames: 158      # MOG2(30) + FFT(128)，必须先于首次推理
   temperature: 0.2        # 低温度稳定JSON输出
   json_mode: true         # Ollama API format:"json" + System Prompt双重约束
+  # 自适应推理频率（根据运动等级动态调整）
+  adaptive:
+    none: 60              # 静止时每60帧推理一次（省资源）
+    low: 30               # 轻微运动时正常频率
+    medium: 15            # 中等运动时提高频率
+    high: 15              # 高强度运动时最高频率
+    hysteresis: 3         # 连续N帧同等级后才切换（防振荡）
 
 # ── 预处理管线 ──
 preprocess:

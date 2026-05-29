@@ -30,6 +30,7 @@ from stage3_prototype import (
     build_diagnostic_prompt,
 )
 from webhook import WebhookConfig, dispatch_webhooks
+from history import get_store
 
 # ── 加载配置 ─────────────────────────────────────────────
 
@@ -56,6 +57,23 @@ ready = threading.Event()
 INFERENCE_INTERVAL = 30
 WARMUP_FRAMES = 158
 JPEG_QUALITY = 70
+
+# 自适应推理频率：运动越强，推理越频繁
+ADAPTIVE_INTERVALS = {"none": 60, "low": 30, "medium": 15, "high": 15}
+INTERVAL_HYSTERESIS = 3  # 连续N帧同等级后才切换，防止振荡
+
+# 从配置覆盖自适应参数
+if CONFIG_PATH.exists():
+    try:
+        _stage3 = _full_cfg.get("stage3", {})
+        _adaptive = _stage3.get("adaptive", {})
+        if _adaptive:
+            for k in ("none", "low", "medium", "high"):
+                if k in _adaptive:
+                    ADAPTIVE_INTERVALS[k] = _adaptive[k]
+            INTERVAL_HYSTERESIS = _adaptive.get("hysteresis", INTERVAL_HYSTERESIS)
+    except Exception:
+        pass
 
 # ── 后台线程 ────────────────────────────────────────────
 
@@ -92,6 +110,12 @@ def camera_loop():
         print("[camera-thread] 预热完成，进入主循环")
         ready.set()
 
+        # 自适应推理：运动越强频率越高，静态时降低以节省资源
+        interval = INFERENCE_INTERVAL
+        last_motion_level = "none"
+        level_streak = 0
+        next_inference_at = WARMUP_FRAMES + interval
+
         while not shutdown_event.is_set():
             frame = cam.capture()
             data = analyzer.analyze_frame(frame)
@@ -101,8 +125,23 @@ def camera_loop():
             with frame_lock:
                 latest_frame_jpeg = jpeg.tobytes()
 
+            # ── 自适应频率调整 ──────────────────────
+            motion_level = data["motion"]["level"]
+            if motion_level == last_motion_level:
+                level_streak += 1
+            else:
+                last_motion_level = motion_level
+                level_streak = 1
+
+            if level_streak >= INTERVAL_HYSTERESIS:
+                new_interval = ADAPTIVE_INTERVALS.get(motion_level, 30)
+                if new_interval != interval:
+                    interval = new_interval
+                    print(f"[camera-thread] 推理间隔 → {interval}帧 (运动={motion_level})")
+
             # 推理帧（退出前跳过推理，避免在HTTP请求中卡住）
-            if fid % INFERENCE_INTERVAL == 0 and not shutdown_event.is_set():
+            if fid >= next_inference_at and not shutdown_event.is_set():
+                next_inference_at = fid + interval
                 py_status, py_cause = compute_status(data)
                 py_conf = compute_confidence(data)
                 prompt_text = build_diagnostic_prompt(data)
@@ -141,6 +180,12 @@ def camera_loop():
                 # Webhook 异步通知（alert/warning 时触发）
                 dispatch_webhooks(_webhook_cfg, diag)
 
+                # 持久化到 SQLite 历史
+                try:
+                    get_store().save(diag)
+                except Exception as e:
+                    print(f"[camera-thread] 历史写入失败: {e}")
+
     except Exception as e:
         print(f"[camera-thread] 异常退出: {e}")
     finally:
@@ -166,7 +211,7 @@ async def lifespan(app: FastAPI):
 
 # ── FastAPI 应用 ────────────────────────────────────────
 
-app = FastAPI(title="Edge-Sense", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Edge-Sense", version="0.5.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -246,6 +291,39 @@ async def shutdown():
     print("[server] 收到 /shutdown 请求，立即退出")
     shutdown_event.set()
     os._exit(0)
+
+
+# ── 历史查询 API ───────────────────────────────────────
+
+@app.get("/api/history")
+async def api_history(limit: int = 100, offset: int = 0):
+    """查询诊断历史记录（按时间倒序）"""
+    try:
+        store = get_store()
+        rows = store.query(limit=min(limit, 1000), offset=offset)
+        return {"count": len(rows), "rows": rows}
+    except Exception as e:
+        return {"error": str(e), "rows": []}
+
+
+@app.get("/api/history/stats")
+async def api_history_stats():
+    """诊断聚合统计"""
+    try:
+        return get_store().stats()
+    except Exception as e:
+        return {"error": str(e), "total": 0}
+
+
+@app.get("/api/history/trend")
+async def api_history_trend(limit: int = 50):
+    """置信度时间序列（用于前端趋势图）"""
+    try:
+        return {
+            "series": get_store().recent_confidence_series(limit=min(limit, 200))
+        }
+    except Exception as e:
+        return {"error": str(e), "series": []}
 
 # ── 入口 ────────────────────────────────────────────────
 

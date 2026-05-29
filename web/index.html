@@ -262,10 +262,16 @@
         <tbody id="history-body"></tbody>
       </table>
     </div>
+
+    <!-- Trend Chart -->
+    <div class="history-card">
+      <h3>📈 置信度趋势 (最近50条)</h3>
+      <canvas id="trend-canvas" width="600" height="160" style="width:100%;height:auto"></canvas>
+    </div>
   </div>
 </div>
 
-<div class="footer">Edge-Sense v0.4.0 · Ollama + OpenCV · 全程离线</div>
+<div class="footer">Edge-Sense v0.5.0 · Ollama + OpenCV · 全程离线</div>
 
 <script>
 // ═══════════════════════════════════════════════════
@@ -409,6 +415,80 @@ function updateUI(msg) {
   }
 }
 
+function fetchTrend() {
+  fetch('/api/history/trend?limit=50')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.series || data.series.length < 2) return;
+      drawTrend(data.series);
+    })
+    .catch(() => {});
+}
+
+function drawTrend(series) {
+  const canvas = document.getElementById('trend-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = { top: 14, right: 14, bottom: 22, left: 38 };
+  const pw = W - pad.left - pad.right;
+  const ph = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // 背景网格
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (ph / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(W - pad.right, y);
+    ctx.stroke();
+  }
+
+  // Y 轴标签
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '9px system-ui';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = 1.0 - i * 0.25;
+    const y = pad.top + (ph / 4) * i;
+    ctx.fillText(v.toFixed(1), pad.left - 6, y + 3);
+  }
+
+  // X 轴标签（首尾帧号）
+  ctx.textAlign = 'center';
+  ctx.fillText('#' + series[0].frame_id, pad.left, H - 4);
+  ctx.fillText('#' + series[series.length - 1].frame_id, W - pad.right, H - 4);
+
+  // 数据线
+  const n = series.length;
+  const xStep = pw / Math.max(n - 1, 1);
+
+  ctx.beginPath();
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < n; i++) {
+    const x = pad.left + xStep * i;
+    const y = pad.top + ph * (1 - series[i].confidence);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // 数据点 + 告警标记
+  for (let i = 0; i < n; i++) {
+    const x = pad.left + xStep * i;
+    const y = pad.top + ph * (1 - series[i].confidence);
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = series[i].status === 'alert' ? '#f85149'
+      : series[i].status === 'warning' ? '#d29922' : '#3fb950';
+    ctx.fill();
+  }
+}
+
 function addHistory(msg) {
   const { frame_id, status, cause, confidence, inference_time_s } = msg;
   history.unshift({ frame_id, status, cause, confidence, inference_time_s });
@@ -429,6 +509,9 @@ function addHistory(msg) {
 
 // 启动
 connect();
+// 每 30 秒刷新趋势图
+setInterval(fetchTrend, 30000);
+fetchTrend();
 </script>
 
 </body>

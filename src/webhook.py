@@ -84,7 +84,7 @@ def build_payload(diagnosis: dict) -> dict:
         },
         "source": {
             "name": "edge-sense",
-            "version": "0.4.0",
+            "version": "0.5.0",
         },
     }
 
@@ -111,7 +111,7 @@ def send_webhook(
     url = url_config.get("url", "")
     headers = dict(url_config.get("headers", {}))
     headers.setdefault("Content-Type", "application/json")
-    headers.setdefault("User-Agent", "Edge-Sense/0.4.0 Webhook")
+    headers.setdefault("User-Agent", "Edge-Sense/0.5.0 Webhook")
 
     for attempt in range(1 + retries):
         try:
