@@ -6,3 +6,4 @@ numpy
 pytesseract
 pyyaml
 pytest
+pytest-benchmark
