@@ -22,7 +22,7 @@ jobs:
       - name: Install system deps (OpenCV)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libgl1-mesa-glx libglib2.0-0
+          sudo apt-get install -y -qq libgl1 libglib2.0-0
 
       - name: Install Python dependencies
         run: |
@@ -51,7 +51,7 @@ jobs:
       - name: Install system deps (OpenCV)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libgl1-mesa-glx libglib2.0-0
+          sudo apt-get install -y -qq libgl1 libglib2.0-0
 
       - name: Install Python dependencies
         run: |
