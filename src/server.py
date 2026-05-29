@@ -49,7 +49,10 @@ def camera_loop():
     global latest_frame_jpeg, latest_diagnosis
     print("[camera-thread] 启动...")
 
-    inference = OllamaInference(model="edge-sense", cold_timeout=300, hot_timeout=120)
+    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    print(f"[camera-thread] Ollama URL: {ollama_url}")
+    inference = OllamaInference(model="edge-sense", base_url=ollama_url,
+                                cold_timeout=300, hot_timeout=120)
 
     if not inference.ping():
         print("[camera-thread] FATAL: Ollama 服务未运行")

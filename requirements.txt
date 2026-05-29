@@ -1,7 +1,8 @@
 ﻿opencv-python
-fastapi
-uvicorn
-pytest
-requests
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
+requests
+numpy
+pytesseract
+pyyaml
+pytest

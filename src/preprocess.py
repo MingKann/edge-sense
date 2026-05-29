@@ -17,11 +17,18 @@ from collections import deque
 from typing import Optional, Tuple, List
 from dataclasses import dataclass, field
 
-# Tesseract OCR 路径（UB-Mannheim 安装，用户级目录）
+# Tesseract OCR 路径
+# 优先级: TESSERACT_CMD 环境变量 → Windows 用户级安装 → 系统 PATH
+import os
 import pytesseract
-pytesseract.pytesseract.tesseract_cmd = (
-    r"C:\Users\mingkann\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
-)
+
+_tesseract_env = os.environ.get("TESSERACT_CMD")
+if _tesseract_env:
+    pytesseract.pytesseract.tesseract_cmd = _tesseract_env
+else:
+    _win_path = r"C:\Users\mingkann\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+    if os.path.exists(_win_path):
+        pytesseract.pytesseract.tesseract_cmd = _win_path
 
 
 # ── 数据类：各模块返回值 ──────────────────────────────────

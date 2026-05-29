@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+*.log
+models/
+.git/
+.gitignore
+.gitattributes
+*.md
+tests/
+docs/
+.claude/

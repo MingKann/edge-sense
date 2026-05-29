@@ -1,0 +1,41 @@
+services:
+
+  # ─── Edge-Sense App ───────────────────────────────
+  edge-sense:
+    build: .
+    ports:
+      - "8000:8000"
+    devices:
+      # Windows/WSL: 摄像头设备透传
+      - "/dev/video0:/dev/video0"
+    environment:
+      # 方案A: 连接宿主机已有的 Ollama（默认）
+      #   Windows: host.docker.internal 自动解析到宿主机
+      #   Linux:   --network=host 或改用 localhost
+      - OLLAMA_URL=http://host.docker.internal:11434
+    restart: unless-stopped
+
+  # ─── Ollama 服务（可选）───────────────────────────
+  # 如需 Docker 内运行 Ollama，取消下方注释即可。
+  # 首次启动后需执行: docker compose exec ollama ollama create edge-sense -f /app/Modelfile.qwen
+  #
+  # ollama:
+  #   image: ollama/ollama
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   ports:
+  #     - "11434:11434"
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #
+  # 若启用 Ollama 容器，edge-sense 的 OLLAMA_URL 需改为:
+  #   - OLLAMA_URL=http://ollama:11434
+
+# volumes:
+#   ollama_data:

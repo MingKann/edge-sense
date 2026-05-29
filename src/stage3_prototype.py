@@ -7,6 +7,7 @@
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -180,6 +181,7 @@ def main():
 
     inference = OllamaInference(
         model=inference_cfg.get("model", "edge-sense"),
+        base_url=os.environ.get("OLLAMA_URL") or inference_cfg.get("base_url", "http://localhost:11434"),
         cold_timeout=inference_cfg.get("cold_timeout", 300),
         hot_timeout=inference_cfg.get("hot_timeout", 120),
     )
