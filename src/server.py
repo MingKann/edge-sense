@@ -29,6 +29,20 @@ from stage3_prototype import (
     compute_confidence,
     build_diagnostic_prompt,
 )
+from webhook import WebhookConfig, dispatch_webhooks
+
+# ── 加载配置 ─────────────────────────────────────────────
+
+CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
+_webhook_cfg = WebhookConfig({})
+if CONFIG_PATH.exists():
+    try:
+        import yaml
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            _full_cfg = yaml.safe_load(f) or {}
+        _webhook_cfg = WebhookConfig(_full_cfg.get("webhook", {}))
+    except Exception as e:
+        print(f"[server] 配置加载失败: {e}")
 
 # ── 全局状态 ─────────────────────────────────────────────
 
@@ -123,6 +137,9 @@ def camera_loop():
 
                 print(f"[camera-thread] 帧#{fid} | {diag['status']} | "
                       f"{diag['inference_time_s']}s | {diag['cause'][:40]}")
+
+                # Webhook 异步通知（alert/warning 时触发）
+                dispatch_webhooks(_webhook_cfg, diag)
 
     except Exception as e:
         print(f"[camera-thread] 异常退出: {e}")

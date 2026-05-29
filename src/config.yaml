@@ -48,3 +48,13 @@ preprocess:
     interval: 10
     psm: 7
     whitelist: "0123456789.-:AVWHzFkMmμ°CΩ"
+
+# ── Webhook 告警通知 ──
+webhook:
+  enabled: false           # true 启用后，诊断出告警时发送 HTTP POST
+  on_status: ["alert"]     # 触发级别：["alert"] 或 ["alert", "warning"]
+  timeout: 5               # 请求超时秒数
+  retries: 2               # 失败重试次数（指数退避）
+  urls:                    # 多目标支持
+    - url: "https://hooks.example.com/edge-sense"
+      headers: {}
